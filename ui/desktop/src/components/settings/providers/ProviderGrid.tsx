@@ -7,6 +7,12 @@ import {
   ProviderDetails,
   UpdateCustomProviderRequest,
 } from '../../../api';
+import {
+  acpCreateCustomProviderFromRequest,
+  acpGetCustomProvider,
+  acpDeleteCustomProvider,
+  acpUpdateCustomProviderFromRequest,
+} from '../../../acp/providers';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import CustomProviderForm from './modal/subcomponents/forms/CustomProviderForm';
@@ -120,14 +126,13 @@ function ProviderCards({
   const configureProviderViaModal = useCallback(
     async (provider: ProviderDetails) => {
       if (provider.provider_type === 'Custom') {
-        const { getCustomProvider } = await import('../../../api');
-        const result = await getCustomProvider({ path: { id: provider.name }, throwOnError: true });
+        const result = await acpGetCustomProvider(provider.name);
 
-        if (result.data) {
+        if (result) {
           setEditingProvider({
             id: provider.name,
-            config: result.data.config,
-            isEditable: result.data.is_editable,
+            config: result.config,
+            isEditable: result.is_editable,
             providerType: provider.provider_type,
           });
 
@@ -152,12 +157,7 @@ function ProviderCards({
     async (data: UpdateCustomProviderRequest) => {
       if (!editingProvider) return;
 
-      const { updateCustomProvider } = await import('../../../api');
-      await updateCustomProvider({
-        path: { id: editingProvider.id },
-        body: data,
-        throwOnError: true,
-      });
+      await acpUpdateCustomProviderFromRequest(editingProvider.id, data);
       const providerId = editingProvider.id;
       setShowCustomProviderModal(false);
       setEditingProvider(null);
@@ -173,11 +173,7 @@ function ProviderCards({
   const handleDeleteCustomProvider = useCallback(async () => {
     if (!editingProvider) return;
 
-    const { removeCustomProvider } = await import('../../../api');
-    await removeCustomProvider({
-      path: { id: editingProvider.id },
-      throwOnError: true,
-    });
+    await acpDeleteCustomProvider(editingProvider.id);
     setShowCustomProviderModal(false);
     setEditingProvider(null);
     setIsActiveProvider(false);
@@ -227,9 +223,8 @@ function ProviderCards({
 
   const handleCreateCustomProvider = useCallback(
     async (data: UpdateCustomProviderRequest) => {
-      const { createCustomProvider } = await import('../../../api');
-      const result = await createCustomProvider({ body: data, throwOnError: true });
-      const providerId = result.data?.provider_name;
+      const result = await acpCreateCustomProviderFromRequest(data);
+      const providerId = result.provider_name;
       setShowCustomProviderModal(false);
       if (refreshProviders) {
         await refreshProviders();
